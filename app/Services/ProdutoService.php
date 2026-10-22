@@ -15,6 +15,20 @@ class ProdutoService
         return Produto::create($dados);
     }
 
+    public function update(Produto $produto, array $dados): Produto
+    {
+        // Usa o valor enviado ou, se não veio, o que já está salvo no produto,
+        // para a regra de margem valer mesmo quando só um dos preços é alterado
+        $preco = $dados['preco'] ?? $produto->preco;
+        $custo = $dados['preco_custo'] ?? $produto->preco_custo;
+
+        $this->verificarMargem((float) $preco, (float) $custo);
+
+        $produto->update($dados);
+
+        return $produto;
+    }
+
     private function verificarMargem(float $preco, float $custo)
     {
         $valor = $custo + (0.1 * $custo);

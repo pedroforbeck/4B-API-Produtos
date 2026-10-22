@@ -26,4 +26,19 @@ class ProdutoTest extends TestCase
         $this->assertDatabaseHas('produtos', [
             'nome' => 'Lajota']);
     }
+
+    public function test_nao_cria_produto_se_o_preco_nao_segue_a_regra_de_negocio(): void
+    {
+        // Custo 100 -> preço mínimo 110. Preço 105 viola a regra da margem
+        $this->postJson('/api/produtos', [
+            'nome' => 'Lajota',
+            'preco_custo' => 100,
+            'preco' => 105,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['preco']);
+
+        $this->assertDatabaseMissing('produtos', [
+            'nome' => 'Lajota']);
+    }
 }

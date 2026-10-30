@@ -8,10 +8,6 @@ use Tests\TestCase;
 
 class ProdutoTest extends TestCase
 {
-    /**
-     * A basic feature test example.
-     */
-
     use RefreshDatabase; // Faltou essa trait na aula -> serve pra utilizar e dar refresh na memória temporária do sqlite
 
 

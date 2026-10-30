@@ -3,16 +3,23 @@
 namespace App\Services;
 
 use App\Models\Produto;
+use App\Repositories\ProdutoRepositoryInterface;
 use Illuminate\Validation\ValidationException;
 
 class ProdutoService
 {
+    public function __construct(private ProdutoRepositoryInterface $produtos) {}
 
     public function create(array $dados)
     {
         $this->verificarMargem($dados['preco'], $dados['preco_custo']);
 
-        return Produto::create($dados);
+        return $this->produtos->create($dados);
+    }
+
+    public function listar(array $filtros)
+    {
+        return $this->produtos->search($filtros);
     }
 
     public function update(Produto $produto, array $dados): Produto

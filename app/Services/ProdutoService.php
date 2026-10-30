@@ -31,9 +31,7 @@ class ProdutoService
 
         $this->verificarMargem((float) $preco, (float) $custo);
 
-        $produto->update($dados);
-
-        return $produto;
+        return $this->produtos->update($produto, $dados);
     }
 
     private function verificarMargem(float $preco, float $custo)
@@ -41,7 +39,7 @@ class ProdutoService
         $valor = $custo + (0.1 * $custo);
         $preco_minimo = round($valor, 2);
 
-        if($preco < $preco_minimo){
+        if ($preco < $preco_minimo) {
             throw ValidationException::withMessages([
                 'preco' => sprintf('O preço deve ser mais do que 10 por cento do valor de custo: %.2f', $preco_minimo),
             ]);

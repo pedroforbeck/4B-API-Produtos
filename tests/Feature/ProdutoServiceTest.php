@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Produto;
+use App\Repositories\ProdutoRepositoryInterface;
 use App\Services\ProdutoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -52,5 +53,19 @@ class ProdutoServiceTest extends TestCase
             'id' => $produto->id,
             'preco' => 110,
         ]);
+    }
+
+    public function test_update_delega_a_persistencia_ao_repository(): void
+    {
+        $produto = $this->criarProduto();
+        $dados = ['preco' => 150];
+
+        $this->mock(ProdutoRepositoryInterface::class)
+            ->shouldReceive('update')
+            ->once()
+            ->with($produto, $dados)
+            ->andReturn($produto);
+
+        $this->assertSame($produto, app(ProdutoService::class)->update($produto, $dados));
     }
 }

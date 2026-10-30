@@ -134,6 +134,56 @@ class ProdutoRepositoryTest extends TestCase
         ], $parametros);
     }
 
+    public function test_update_persiste_alteracoes_e_retorna_o_produto_atualizado(): void
+    {
+        $produto = $this->criarProduto(['descricao' => 'Original']);
+
+        $atualizado = app(ProdutoRepositoryInterface::class)->update($produto, [
+            'nome' => 'Lajota premium', 'preco' => 15, 'quantidade' => 0, 'descricao' => null,
+        ]);
+
+        $this->assertSame($produto->id, $atualizado->id);
+        $this->assertSame('Lajota premium', $atualizado->nome);
+        $this->assertNull($atualizado->descricao);
+        $this->assertDatabaseHas('produtos', [
+            'id' => $produto->id, 'nome' => 'Lajota premium', 'preco' => 15,
+            'quantidade' => 0, 'descricao' => null, 'preco_custo' => 5,
+        ]);
+    }
+
+    public function test_api_atualiza_produto_e_preserva_campos_nao_enviados(): void
+    {
+        $produto = $this->criarProduto();
+
+        $this->patchJson('/api/produtos/'.$produto->id, ['nome' => 'Lajota premium'])
+            ->assertOk()
+            ->assertJsonPath('data.id', $produto->id)
+            ->assertJsonPath('data.nome', 'Lajota premium');
+
+        $this->assertDatabaseHas('produtos', [
+            'id' => $produto->id, 'nome' => 'Lajota premium', 'preco' => 10,
+            'preco_custo' => 5, 'quantidade' => 10,
+        ]);
+    }
+
+    public function test_api_nao_atualiza_quando_apenas_o_custo_viola_a_margem(): void
+    {
+        $produto = $this->criarProduto();
+
+        $this->putJson('/api/produtos/'.$produto->id, ['preco_custo' => 10])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('preco');
+
+        $this->assertDatabaseHas('produtos', [
+            'id' => $produto->id, 'preco' => 10, 'preco_custo' => 5,
+        ]);
+    }
+
+    public function test_api_update_retorna_404_para_produto_inexistente(): void
+    {
+        $this->putJson('/api/produtos/999', ['nome' => 'Inexistente'])->assertNotFound();
+    }
+
     private function criarProduto(array $dados = []): Produto
     {
         return Produto::create(array_merge([

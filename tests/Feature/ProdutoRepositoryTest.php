@@ -184,6 +184,35 @@ class ProdutoRepositoryTest extends TestCase
         $this->putJson('/api/produtos/999', ['nome' => 'Inexistente'])->assertNotFound();
     }
 
+    public function test_delete_remove_somente_o_produto_informado(): void
+    {
+        $produto = $this->criarProduto();
+        $outro = $this->criarProduto();
+
+        app(ProdutoRepositoryInterface::class)->delete($produto);
+
+        $this->assertDatabaseMissing('produtos', ['id' => $produto->id]);
+        $this->assertDatabaseHas('produtos', ['id' => $outro->id]);
+    }
+
+    public function test_api_exclui_produto_e_retorna_204_sem_corpo(): void
+    {
+        $produto = $this->criarProduto();
+        $outro = $this->criarProduto();
+
+        $this->deleteJson('/api/produtos/'.$produto->id)->assertNoContent();
+
+        $this->assertDatabaseMissing('produtos', ['id' => $produto->id]);
+        $this->assertDatabaseHas('produtos', ['id' => $outro->id]);
+        $this->getJson('/api/produtos/'.$produto->id)->assertNotFound();
+        $this->deleteJson('/api/produtos/'.$produto->id)->assertNotFound();
+    }
+
+    public function test_api_delete_retorna_404_para_produto_inexistente(): void
+    {
+        $this->deleteJson('/api/produtos/999')->assertNotFound();
+    }
+
     private function criarProduto(array $dados = []): Produto
     {
         return Produto::create(array_merge([

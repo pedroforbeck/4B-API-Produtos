@@ -34,6 +34,11 @@ class ProdutoService
         return $this->produtos->update($produto, $dados);
     }
 
+    public function delete(Produto $produto): void
+    {
+        $this->produtos->delete($produto);
+    }
+
     private function verificarMargem(float $preco, float $custo)
     {
         $valor = $custo + (0.1 * $custo);

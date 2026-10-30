@@ -7,6 +7,8 @@ use App\Http\Resources\ProdutoResource;
 use App\Models\Produto;
 use App\Services\ProdutoService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class ProdutoController extends Controller
 {
@@ -15,7 +17,7 @@ class ProdutoController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(Request $request): AnonymousResourceCollection
     {
         $filtros = $request->validate([
             'search' => ['nullable', 'string', 'max:255'],
@@ -78,8 +80,10 @@ class ProdutoController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Produto $produto): Response
     {
-        //
+        $this->service->delete($produto);
+
+        return response()->noContent();
     }
 }

@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 
 class ProdutoController extends Controller
 {
-
     public function __construct(private ProdutoService $service) {}
 
     /**
@@ -18,11 +17,12 @@ class ProdutoController extends Controller
      */
     public function index(Request $request)
     {
-        $filtros = [
-            'search' => $request->query('search'),
-        ];
+        $filtros = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'preco_min' => ['nullable', 'numeric', 'min:0'],
+        ]);
 
-        return ProdutoResource::collection($this->service->listar($filtros));
+        return ProdutoResource::collection($this->service->listar($filtros)->withQueryString());
     }
 
     /**

@@ -7,7 +7,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class EloquentProdutoRepository implements ProdutoRepositoryInterface
 {
-
     public function create(array $dados): Produto
     {
         return Produto::create($dados);
@@ -28,9 +27,10 @@ class EloquentProdutoRepository implements ProdutoRepositoryInterface
     public function search(array $filtros = [], int $porPagina = 10): LengthAwarePaginator
     {
         return Produto::query()
-                ->when($filtros['search'] ?? null, 
-                fn ($query, $pedaco) => 
-                $query->where('nome', 'LIKE', "%{$pedaco}%"))->paginate($porPagina);
+            ->when(isset($filtros['search']) && $filtros['search'] !== '',
+                fn ($query) => $query->where('nome', 'LIKE', "%{$filtros['search']}%"))
+            ->when(isset($filtros['preco_min']),
+                fn ($query) => $query->where('preco', '>=', $filtros['preco_min']))
+            ->paginate($porPagina);
     }
-
 }

@@ -41,6 +41,99 @@ class ProdutoRepositoryTest extends TestCase
             ->assertJsonValidationErrors('preco_min');
     }
 
+    public function test_search_filtra_por_preco_maximo_incluindo_o_limite(): void
+    {
+        $abaixo = $this->criarProduto(['preco' => 10]);
+        $limite = $this->criarProduto(['preco' => 20]);
+        $this->criarProduto(['preco' => 30]);
+
+        $resultado = app(ProdutoRepositoryInterface::class)->search(['preco_max' => 20]);
+
+        $this->assertSame([$abaixo->id, $limite->id], $resultado->getCollection()->modelKeys());
+    }
+
+    public function test_search_combina_nome_e_intervalo_de_precos(): void
+    {
+        $this->criarProduto(['nome' => 'Lajota simples', 'preco' => 10]);
+        $produto = $this->criarProduto(['nome' => 'Lajota premium', 'preco' => 20]);
+        $this->criarProduto(['nome' => 'Lajota especial', 'preco' => 30]);
+        $this->criarProduto(['nome' => 'Cimento', 'preco' => 20]);
+
+        $resultado = app(ProdutoRepositoryInterface::class)->search([
+            'search' => 'Lajota', 'preco_min' => 15, 'preco_max' => 25,
+        ]);
+
+        $this->assertSame([$produto->id], $resultado->getCollection()->modelKeys());
+    }
+
+    public function test_search_aceita_zero_nos_filtros(): void
+    {
+        $produto = $this->criarProduto(['nome' => 'Produto 0', 'preco' => 0, 'preco_custo' => 0]);
+        $this->criarProduto(['nome' => 'Produto 0 pago']);
+        $this->criarProduto(['nome' => 'Brinde', 'preco' => 0, 'preco_custo' => 0]);
+
+        $resultado = app(ProdutoRepositoryInterface::class)->search([
+            'search' => '0', 'preco_min' => 0, 'preco_max' => 0,
+        ]);
+
+        $this->assertSame([$produto->id], $resultado->getCollection()->modelKeys());
+    }
+
+    public function test_search_sem_filtros_mantem_a_paginacao(): void
+    {
+        $this->criarProduto();
+        $this->criarProduto();
+        $this->criarProduto();
+
+        $resultado = app(ProdutoRepositoryInterface::class)->search([], 2);
+
+        $this->assertSame(3, $resultado->total());
+        $this->assertCount(2, $resultado->items());
+    }
+
+    public function test_api_aplica_preco_maximo_isolado_e_os_filtros_combinados(): void
+    {
+        $produto = $this->criarProduto(['preco' => 20]);
+        $this->criarProduto(['preco' => 30]);
+
+        $this->getJson('/api/produtos?preco_max=20')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $produto->id);
+
+        $this->getJson('/api/produtos?search=Lajota&preco_min=20&preco_max=20')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $produto->id);
+    }
+
+    public function test_api_rejeita_preco_maximo_invalido_e_intervalo_invertido(): void
+    {
+        foreach (['preco_max=-1', 'preco_max=abc', 'preco_min=30&preco_max=20'] as $filtros) {
+            $this->getJson('/api/produtos?'.$filtros)
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors('preco_max');
+        }
+    }
+
+    public function test_api_preserva_filtros_nos_links_de_paginacao(): void
+    {
+        for ($i = 0; $i < 11; $i++) {
+            $this->criarProduto();
+        }
+
+        $resposta = $this->getJson('/api/produtos?search=Lajota&preco_min=5&preco_max=20')
+            ->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('meta.total', 11);
+
+        parse_str(parse_url($resposta->json('links.next'), PHP_URL_QUERY), $parametros);
+
+        $this->assertSame([
+            'search' => 'Lajota', 'preco_min' => '5', 'preco_max' => '20', 'page' => '2',
+        ], $parametros);
+    }
+
     private function criarProduto(array $dados = []): Produto
     {
         return Produto::create(array_merge([
